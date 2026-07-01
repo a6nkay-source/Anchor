@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { WellnessRing } from "@/components/wellness-ring";
 import { SignalBar } from "@/components/signal-bar";
 import { useSignals } from "@/components/signals-store";
+import { DailyCompanion } from "@/components/daily-companion";
 
 export default function Overview() {
   const { state, wellnessScore, wellnessLabel } = useSignals();
@@ -25,12 +26,14 @@ export default function Overview() {
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      <DailyCompanion />
+
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">
           Now
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-100 md:text-4xl">
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-100 md:text-3xl">
           {timeStr}. {wellnessLabel[0].toUpperCase() + wellnessLabel.slice(1)}.
         </h1>
       </div>

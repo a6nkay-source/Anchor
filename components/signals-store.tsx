@@ -68,6 +68,34 @@ export interface DistractionEvent {
   detail?: string;
 }
 
+export type WellnessEventKind =
+  | "poor-posture"
+  | "eye-strain"
+  | "low-blink-rate"
+  | "mental-fatigue"
+  | "high-stress"
+  | "long-sitting"
+  | "excessive-distractions"
+  | "left-focus"
+  | "low-productivity"
+  | "no-breaks";
+
+export interface WellnessEvent {
+  id: string;
+  ts: number;
+  kind: WellnessEventKind;
+  severity: "gentle" | "notable" | "urgent";
+  message: string;
+}
+
+export interface Achievement {
+  id: string;
+  ts: number;
+  label: string;
+  detail: string;
+  emoji?: string;
+}
+
 export interface HistorySnapshot {
   ts: number;
   wellness: number;
@@ -86,6 +114,9 @@ interface State {
   wearable: WearableStats;
   nudges: Nudge[];
   distractions: DistractionEvent[];
+  events: WellnessEvent[];
+  achievements: Achievement[];
+  recentCoachLines: string[]; // ring buffer for no-repeat
   history: HistorySnapshot[];
   sessionStartedAt: number | null;
 }
@@ -97,6 +128,10 @@ type Action =
   | { type: "wearable"; payload: Partial<WearableStats> }
   | { type: "nudge"; payload: Omit<Nudge, "id" | "ts"> }
   | { type: "distraction"; payload: Omit<DistractionEvent, "id" | "ts"> }
+  | { type: "wellness-event"; payload: Omit<WellnessEvent, "id" | "ts"> }
+  | { type: "clear-event"; id: string }
+  | { type: "achievement"; payload: Omit<Achievement, "id" | "ts"> }
+  | { type: "coach-line"; payload: string }
   | { type: "snapshot"; payload: HistorySnapshot }
   | { type: "start-session" }
   | { type: "end-session" }
@@ -127,6 +162,9 @@ const initial: State = {
   wearable: { connected: false, deviceName: null },
   nudges: [],
   distractions: [],
+  events: [],
+  achievements: [],
+  recentCoachLines: [],
   history: [],
   sessionStartedAt: null,
 };
@@ -156,6 +194,34 @@ function reducer(state: State, action: Action): State {
         ts: Date.now(),
       };
       return { ...state, distractions: [d, ...state.distractions].slice(0, 200) };
+    }
+    case "wellness-event": {
+      const e: WellnessEvent = {
+        ...action.payload,
+        id: Math.random().toString(36).slice(2),
+        ts: Date.now(),
+      };
+      return { ...state, events: [e, ...state.events].slice(0, 120) };
+    }
+    case "clear-event":
+      return { ...state, events: state.events.filter((e) => e.id !== action.id) };
+    case "achievement": {
+      // do not double-award identical labels
+      if (state.achievements.some((a) => a.label === action.payload.label)) return state;
+      const a: Achievement = {
+        ...action.payload,
+        id: Math.random().toString(36).slice(2),
+        ts: Date.now(),
+      };
+      return { ...state, achievements: [a, ...state.achievements].slice(0, 80) };
+    }
+    case "coach-line": {
+      const line = action.payload.slice(0, 240);
+      if (!line) return state;
+      return {
+        ...state,
+        recentCoachLines: [line, ...state.recentCoachLines].slice(0, 12),
+      };
     }
     case "snapshot":
       return { ...state, history: [...state.history, action.payload].slice(-240) };
@@ -301,6 +367,10 @@ interface Ctx {
   updateWearable: (p: Partial<WearableStats>) => void;
   addNudge: (n: Omit<Nudge, "id" | "ts">) => void;
   logDistraction: (n: Omit<DistractionEvent, "id" | "ts">) => void;
+  fireEvent: (n: Omit<WellnessEvent, "id" | "ts">) => void;
+  clearEvent: (id: string) => void;
+  awardAchievement: (n: Omit<Achievement, "id" | "ts">) => void;
+  rememberCoachLine: (text: string) => void;
   startSession: () => void;
   endSession: () => void;
   resetVision: () => void;
@@ -337,6 +407,24 @@ export function SignalsProvider({ children }: { children: React.ReactNode }) {
   const logDistraction = useCallback(
     (n: Omit<DistractionEvent, "id" | "ts">) =>
       dispatch({ type: "distraction", payload: n }),
+    []
+  );
+  const fireEvent = useCallback(
+    (n: Omit<WellnessEvent, "id" | "ts">) =>
+      dispatch({ type: "wellness-event", payload: n }),
+    []
+  );
+  const clearEvent = useCallback(
+    (id: string) => dispatch({ type: "clear-event", id }),
+    []
+  );
+  const awardAchievement = useCallback(
+    (n: Omit<Achievement, "id" | "ts">) =>
+      dispatch({ type: "achievement", payload: n }),
+    []
+  );
+  const rememberCoachLine = useCallback(
+    (text: string) => dispatch({ type: "coach-line", payload: text }),
     []
   );
   const startSession = useCallback(() => dispatch({ type: "start-session" }), []);
@@ -378,6 +466,10 @@ export function SignalsProvider({ children }: { children: React.ReactNode }) {
       updateWearable,
       addNudge,
       logDistraction,
+      fireEvent,
+      clearEvent,
+      awardAchievement,
+      rememberCoachLine,
       startSession,
       endSession,
       resetVision,
@@ -394,6 +486,10 @@ export function SignalsProvider({ children }: { children: React.ReactNode }) {
       updateWearable,
       addNudge,
       logDistraction,
+      fireEvent,
+      clearEvent,
+      awardAchievement,
+      rememberCoachLine,
       startSession,
       endSession,
       resetVision,

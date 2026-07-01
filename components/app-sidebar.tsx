@@ -29,6 +29,9 @@ import {
   Rewind,
   Trophy,
   FileBarChart,
+  Music,
+  AlertCircle,
+  Award,
   Gauge,
   Zap,
   TrendingUp,
@@ -63,6 +66,8 @@ const groups: { label: string; items: { href: string; label: string; icon: any; 
       { href: "/app/typing", label: "Typing", icon: Keyboard },
       { href: "/app/voice", label: "Voice", icon: Mic },
       { href: "/app/signals", label: "Signals log", icon: Activity },
+      { href: "/app/events", label: "Wellness events", icon: AlertCircle },
+      { href: "/app/achievements", label: "Achievements", icon: Award },
     ],
   },
   {

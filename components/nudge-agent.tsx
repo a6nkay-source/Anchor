@@ -7,13 +7,19 @@ import { useFocus } from "@/components/focus-mode";
 import { assignments, courseById } from "@/lib/mock-data";
 import { speak } from "@/lib/speech";
 
-// Guaranteed 30-second cadence coach. Every 30 seconds Anchor speaks one
-// short line based on live signals. When things look steady it says
-// something calm; when something drifts it names it and offers a small cue.
 const CADENCE_MS = 30_000;
 
+// Anchor's personality — one shared voice across every touchpoint.
+const PERSONA = `You are Anchor — the student's calm study buddy. Voice traits:
+- Warm, supportive, encouraging, professional. Never annoying, never scolding, never dramatic.
+- Motivating without being loud. Say less to say more.
+- Vary phrasing every time. Do NOT reuse language from your recent lines (a list is provided).
+- Never mention that you are an AI, model, or bot. Never say "I noticed" more than once per session.
+- No emojis. No exclamation marks. No lists.
+- Max one short sentence, under 18 words. When steady, offer a small grounding note; don't invent problems.`;
+
 export function NudgeAgent() {
-  const { state, wellnessScore, wellnessLabel, metrics, addNudge } = useSignals();
+  const { state, wellnessScore, wellnessLabel, metrics, addNudge, rememberCoachLine } = useSignals();
   const { phase: camPhase } = useMonitor();
   const { active: focusActive, remainingSec, distractionAttempts } = useFocus();
   const lastAt = useRef<number>(0);
@@ -37,9 +43,6 @@ export function NudgeAgent() {
 
       const v = state.vision;
       const t = state.typing;
-
-      // Only run when at least one signal source is active — no point
-      // speaking if the app has no signals to reason about.
       const anyActive = v.active || t.active || focusActive || camPhase === "running";
       if (!anyActive) return;
 
@@ -50,37 +53,38 @@ export function NudgeAgent() {
         .sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime())[0];
       const currentCourse = currentAssignment && courseById(currentAssignment.courseId);
 
-      // Build a concise observation summary the model can react to.
       const observations: string[] = [];
       if (v.active) {
         if (v.postureScore < 55) observations.push("posture slipping forward");
         else if (v.postureScore > 80) observations.push("posture strong");
         if (v.jawTension > 0.55) observations.push("jaw tight");
         if (v.browTension > 0.55) observations.push("brow furrowed");
-        if (v.blinkRate < 6) observations.push("very few blinks — likely locked in");
-        else if (v.blinkRate > 22) observations.push("blinking a lot — restless");
-        if (v.gazeCentered < 0.4) observations.push("gaze drifting from screen");
+        if (v.blinkRate < 6) observations.push("very few blinks");
+        if (v.gazeCentered < 0.4) observations.push("gaze drifting");
       }
       if (t.active) {
         if (t.backspaceRatio > 0.28) observations.push("lots of deleting");
-        if (t.cadenceVariance > 0.6) observations.push("choppy typing rhythm");
+        if (t.cadenceVariance > 0.6) observations.push("choppy rhythm");
         if (t.hesitationScore < 55) observations.push("many hesitations");
         if (t.wpm > 50) observations.push("steady flow");
       }
-      if (focusActive) observations.push(`in focus block, ${Math.floor(remainingSec / 60)} min left`);
+      if (focusActive) observations.push(`in focus, ${Math.floor(remainingSec / 60)}m left`);
       if (distractionAttempts > 0)
-        observations.push(`${distractionAttempts} distraction attempts this block`);
+        observations.push(`${distractionAttempts} distractions this block`);
 
-      const summary =
-        observations.length > 0 ? observations.join("; ") : "everything looks steady";
+      const summary = observations.length ? observations.join("; ") : "everything looks steady";
+      const flowState = metrics.focus > 75 && metrics.stress < 45;
 
+      const recent = state.recentCoachLines.slice(0, 8);
       const context = [
         `Wellness ${wellnessScore}/100 (${wellnessLabel}).`,
         `Focus ${Math.round(metrics.focus)}, stress ${Math.round(metrics.stress)}, fatigue ${Math.round(metrics.fatigue)}.`,
         `Signals: ${summary}.`,
+        flowState ? "The student appears to be in flow — do not interrupt momentum, just say something small and confidence-building." : "",
         currentAssignment
           ? `Current task: "${currentAssignment.title}" (${currentCourse?.code ?? "—"}).`
           : "",
+        recent.length ? `Your recent lines (DO NOT REPEAT phrasing or advice): ${recent.map((s) => `"${s}"`).join(" | ")}` : "",
       ]
         .filter(Boolean)
         .join(" ");
@@ -91,11 +95,7 @@ export function NudgeAgent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: [
-              {
-                role: "system",
-                content:
-                  "You are Anchor, the student's quiet coach. Every 30 seconds you speak ONE short warm sentence — max 18 words. Warm and concrete. If signals look steady, say something grounding or affirming; do NOT invent problems. Never lecture. No lists. No emojis. No 'as an AI'. Vary your language across turns.",
-              },
+              { role: "system", content: PERSONA },
               { role: "user", content: context },
             ],
           }),
@@ -104,20 +104,18 @@ export function NudgeAgent() {
         const text = (data?.reply ?? "").toString().trim();
         if (text) {
           addNudge({ source: focusActive ? "system" : "coach", text });
+          rememberCoachLine(text);
           if (!mutedRef.current) speak(text);
           lastAt.current = Date.now();
         }
       } catch {
-        /* silent — try again next tick */
       } finally {
         inFlight.current = false;
       }
     };
 
-    // Fire once shortly after arming, then every 30s.
     const kickoff = setTimeout(tick, 5_000);
-    const id = setInterval(tick, 3_000); // check often, gate by lastAt
-
+    const id = setInterval(tick, 3_000);
     return () => {
       clearTimeout(kickoff);
       clearInterval(id);
@@ -125,6 +123,7 @@ export function NudgeAgent() {
   }, [
     state.vision,
     state.typing,
+    state.recentCoachLines,
     wellnessScore,
     wellnessLabel,
     metrics,
@@ -133,6 +132,7 @@ export function NudgeAgent() {
     distractionAttempts,
     camPhase,
     addNudge,
+    rememberCoachLine,
   ]);
 
   return null;
