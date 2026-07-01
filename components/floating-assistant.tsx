@@ -39,6 +39,21 @@ const PAGE_CONTEXT: Record<string, { title: string; hint: string; opener?: strin
   "/app/focus": { title: "Focus Room", hint: "Guarding your block.", opener: "Set the length — I'll keep the noise out." },
   "/app/parent": { title: "Parent view", hint: "The demo dashboard.", opener: "This is a demo view of what a guardian would see." },
   "/app/settings": { title: "Settings", hint: "You control what I can see.", opener: "Every switch is opt-in. Nothing turns on unless you flip it." },
+  "/app/index-score": { title: "Wellness Index", hint: "One number for how you're doing.", opener: "Ask me why the number is what it is." },
+  "/app/readiness": { title: "Readiness", hint: "How prepared you are to study.", opener: "Want me to say whether to start now or rest?" },
+  "/app/burnout": { title: "Burnout", hint: "14-day forecast.", opener: "I'll show you what's driving the trend." },
+  "/app/biomarkers": { title: "Biomarkers", hint: "Motor + perceptual + voice signals.", opener: "Ask me to translate these into one action." },
+  "/app/mastery": { title: "Concept mastery", hint: "Where you're solid, and where you're not.", opener: "I can build a session around your weakest concept." },
+  "/app/prescription": { title: "Study Prescription", hint: "A session tuned to today.", opener: "Say the word and I'll start the first block." },
+  "/app/recovery": { title: "Sleep & recovery", hint: "How your body is doing under the studying.", opener: "Want tonight's plan?" },
+  "/app/ergonomics": { title: "Ergonomics", hint: "Body, eyes, jaw.", opener: "I'll pick the stretch that helps most today." },
+  "/app/adaptive": { title: "Adaptive focus", hint: "Block length tuned to fatigue.", opener: "Ready when you are." },
+  "/app/timeline": { title: "Health timeline", hint: "Everything at once.", opener: "Which line do you want to talk about?" },
+  "/app/checkin": { title: "Check-in", hint: "Two-minute self-report.", opener: "I'll blend what you say with what I see." },
+  "/app/integrations": { title: "Wearables", hint: "Optional device pairing.", opener: "I won't invent numbers — I only show what you connect." },
+  "/app/reports": { title: "Reports", hint: "Daily and weekly summaries.", opener: "Want me to write today's summary?" },
+  "/app/health": { title: "Health Dashboard", hint: "Every metric, one page.", opener: "Ask me which of these to worry about first." },
+  "/app/replay": { title: "Session replay", hint: "Scrub through your last block.", opener: "I can point out where focus dipped." },
 };
 
 function contextFor(pathname: string | null) {

@@ -21,38 +21,77 @@ import {
   Anchor as AnchorIcon,
   Play,
   Square,
+  HeartPulse,
+  Sparkles,
+  Network,
+  BookMarked,
+  ListTodo,
+  Rewind,
+  Trophy,
+  FileBarChart,
+  Gauge,
+  Zap,
+  TrendingUp,
+  Waves,
+  Target,
+  Moon,
+  Armchair,
+  Timer,
+  LineChart,
+  Heart,
+  Bluetooth,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSignals } from "@/components/signals-store";
 import { useFocus } from "@/components/focus-mode";
+import { useMonitor } from "@/components/wellness-monitor";
 
-const groups: {
-  label: string;
-  items: {
-    href: string;
-    label: string;
-    icon: any;
-    exact?: boolean;
-  }[];
-}[] = [
+const groups: { label: string; items: { href: string; label: string; icon: any; exact?: boolean }[] }[] = [
   {
-    label: "Wellness",
+    label: "Home",
     items: [
       { href: "/app", label: "Overview", icon: LayoutDashboard, exact: true },
+      { href: "/app/index-score", label: "Wellness Index", icon: Gauge },
+      { href: "/app/readiness", label: "Readiness", icon: Zap },
+      { href: "/app/coach", label: "AI Coach", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Live signals",
+    items: [
       { href: "/app/vision", label: "Vision", icon: Camera },
       { href: "/app/typing", label: "Typing", icon: Keyboard },
       { href: "/app/voice", label: "Voice", icon: Mic },
-      { href: "/app/signals", label: "Signals", icon: Activity },
+      { href: "/app/signals", label: "Signals log", icon: Activity },
+    ],
+  },
+  {
+    label: "Health",
+    items: [
+      { href: "/app/health", label: "Health Dashboard", icon: HeartPulse },
+      { href: "/app/biomarkers", label: "Digital biomarkers", icon: Waves },
+      { href: "/app/burnout", label: "Burnout forecast", icon: TrendingUp },
+      { href: "/app/recovery", label: "Sleep & recovery", icon: Moon },
+      { href: "/app/ergonomics", label: "Ergonomics", icon: Armchair },
+      { href: "/app/checkin", label: "Check-in", icon: Heart },
+      { href: "/app/timeline", label: "Health timeline", icon: LineChart },
+      { href: "/app/integrations", label: "Wearables", icon: Bluetooth },
     ],
   },
   {
     label: "Study",
     items: [
       { href: "/app/courses", label: "Courses", icon: BookOpen },
+      { href: "/app/graderoom", label: "GradeRoom", icon: Trophy },
       { href: "/app/assignments", label: "Assignments", icon: ClipboardList },
+      { href: "/app/mastery", label: "Concept mastery", icon: Target },
+      { href: "/app/prescription", label: "Study Prescription", icon: Sparkles },
+      { href: "/app/planner", label: "Planner", icon: ListTodo },
       { href: "/app/calendar", label: "Calendar", icon: CalendarDays },
       { href: "/app/notes", label: "Notes", icon: FileText },
+      { href: "/app/reader", label: "PDF Reader", icon: BookMarked },
       { href: "/app/flashcards", label: "Flashcards", icon: Layers },
+      { href: "/app/graph", label: "Knowledge graph", icon: Network },
       { href: "/app/tutor", label: "AI Tutor", icon: GraduationCap },
     ],
   },
@@ -64,6 +103,9 @@ const groups: {
     label: "System",
     items: [
       { href: "/app/focus", label: "Focus Room", icon: Focus },
+      { href: "/app/adaptive", label: "Adaptive focus", icon: Timer },
+      { href: "/app/replay", label: "Session replay", icon: Rewind },
+      { href: "/app/reports", label: "Reports", icon: FileBarChart },
       { href: "/app/parent", label: "Parent view", icon: Users },
       { href: "/app/settings", label: "Settings", icon: Settings },
     ],
@@ -74,6 +116,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { wellnessScore, wellnessLabel, state } = useSignals();
   const { active: focusActive, remainingSec, start, stop } = useFocus();
+  const { phase: camPhase } = useMonitor();
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col justify-between border-r border-neutral-900 bg-black/40 p-4 backdrop-blur">
@@ -109,7 +152,7 @@ export function AppSidebar() {
                   >
                     <t.icon className="h-4 w-4" />
                     <span className="truncate">{t.label}</span>
-                    {t.label === "Vision" && state.vision.active && (
+                    {t.label === "Vision" && camPhase === "running" && (
                       <span className="ml-auto h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                     )}
                     {t.label === "Typing" && state.typing.active && (
@@ -145,7 +188,7 @@ export function AppSidebar() {
                 {String(remainingSec % 60).padStart(2, "0")}
               </span>
               <button
-                onClick={stop}
+                onClick={() => stop()}
                 className="inline-flex items-center gap-1 rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-1 text-[11px] text-rose-200 hover:border-rose-400/60"
               >
                 <Square className="h-3 w-3" /> Exit
